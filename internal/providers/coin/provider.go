@@ -109,7 +109,23 @@ func (s *coinServer) RemoveCoins(ctx context.Context, request *coin_service.Remo
 // count = 0.  It also relies on modifying the counts in the pot arg
 // as a side-effect, which I wouldn't ordinarily do or allow, but
 // there are limits to how much time I'm going to devote to this.
+// same goes for refactoring this into shorter functions
+//
+// Basic algorithm:
+//
+// compute count of each denomination of coins in pot and total count
+// generate random number between [0, total)
+// If number is between [0, gold_count), remove a gold coin.
+// If number is between [gold_count, gold_count + silver_count), remove silver coin
+// If number is >= gold_count + silver_count, remove bronze coin
+// so long as random number generator has even distribution, we will
+// end up removing coins proportionally to their count in the pot.
+//
+// Relies on side effect of modifying instances pointed to by pot in
+// order to communicate both the set of coins removed and the new state
+// of coins in pot, which is a code smell, but quick to implement
 func (s *coinServer) shakePot(pot []*models.CoinsInPot, count int32) []*coin_service.Coins {
+
 	// map of denomination to count
 	coinCounts := make(map[int32]int32, len(pot))
 	// map of denomination to array of models.CoinsInPot
@@ -171,4 +187,39 @@ func (s *coinServer) shakePot(pot []*models.CoinsInPot, count int32) []*coin_ser
 		removedCoins = append(removedCoins, v)
 	}
 	return removedCoins
+}
+
+// ListCoins added to enable validation that RemoveCoins works correctly
+// without having to mock out a DB connection and otherwise build test
+// infrastructure. It was much faster to just cut and paste this together
+// to see what current state of a pot is.
+func (s *coinServer) ListCoins(ctx context.Context, request *coin_service.ListCoinsRequest) (*coin_service.CoinsListResponse, error) {
+	if err := request.Validate(); err != nil {
+		return nil, twirp.InvalidArgumentError(err.Error(), "")
+	}
+
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return nil, twirp.InternalError(err.Error())
+	}
+
+	coinsInPot, err := models.CoinsInPotsByPot_id(tx, int(request.PotId))
+	if err != nil {
+		return nil, twirp.NotFoundError(err.Error())
+	}
+	response := &coin_service.CoinsListResponse{
+		Coins: make([]*coin_service.Coins, 0, len(coinsInPot)),
+	}
+	for _, coins := range coinsInPot {
+		response.Coins = append(response.Coins, &coin_service.Coins{
+			Kind:  coin_service.Coins_Kind(coins.Denomination),
+			Count: coins.CoinCount,
+		})
+	}
+	err = tx.Commit()
+	if err != nil {
+		return nil, twirp.InternalError(err.Error())
+	}
+
+	return response, nil
 }

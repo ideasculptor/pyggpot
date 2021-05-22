@@ -3,15 +3,16 @@ package pot_provider
 import (
 	"context"
 	"database/sql"
+	"time"
+
 	"github.com/aspiration-labs/pyggpot/internal/models"
-	"github.com/aspiration-labs/pyggpot/rpc/go/pot"
+	pot_service "github.com/aspiration-labs/pyggpot/rpc/go/pot"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/twitchtv/twirp"
 	"github.com/xo/xoutil"
-	"time"
 )
 
-type potServer struct{
+type potServer struct {
 	DB *sql.DB
 }
 
@@ -30,11 +31,12 @@ func (s *potServer) ViewPot(ctx context.Context, request *pot_service.ViewPotReq
 		return nil, twirp.NotFoundError(err.Error())
 	}
 	return &pot_service.PotResponse{
-		PotId: pot.ID,
-		PotName: pot.PotName,
-		MaxCoins: pot.MaxCoins,
-		CreateTime: &timestamp.Timestamp{Seconds:pot.CreateTime.Unix(), Nanos: int32(pot.CreateTime.Nanosecond())},
-	}, nil}
+		PotId:      pot.ID,
+		PotName:    pot.PotName,
+		MaxCoins:   pot.MaxCoins,
+		CreateTime: &timestamp.Timestamp{Seconds: pot.CreateTime.Unix(), Nanos: int32(pot.CreateTime.Nanosecond())},
+	}, nil
+}
 
 func (s *potServer) ListPots(ctx context.Context, request *pot_service.ListPotsRequest) (*pot_service.PotListResponse, error) {
 	if request.Limit == 0 {
@@ -57,24 +59,36 @@ func (s *potServer) ListPots(ctx context.Context, request *pot_service.ListPotsR
 	potResult := []*pot_service.PotResponse{}
 	for _, pot := range pots {
 		pot := pot_service.PotResponse{
-			PotId: pot.ID,
-			PotName: pot.PotName,
-			MaxCoins: pot.MaxCoins,
-			CreateTime: &timestamp.Timestamp{Seconds:pot.CreateTime.Unix(), Nanos: int32(pot.CreateTime.Nanosecond())},
+			PotId:      pot.ID,
+			PotName:    pot.PotName,
+			MaxCoins:   pot.MaxCoins,
+			CreateTime: &timestamp.Timestamp{Seconds: pot.CreateTime.Unix(), Nanos: int32(pot.CreateTime.Nanosecond())},
 		}
 		potResult = append(potResult, &pot)
 	}
 	potList := pot_service.PotListResponse{
 		TotalPotCount: potCount,
-		Request: request,
-		Pots: potResult,
+		Request:       request,
+		Pots:          potResult,
 	}
 
 	return &potList, nil
 }
 
-func (s *potServer) ViewPotByName(context.Context, *pot_service.ViewPotByNameRequest) (*pot_service.PotResponse, error) {
-	panic("implement me")
+func (s *potServer) ViewPotByName(ctx context.Context, request *pot_service.ViewPotByNameRequest) (*pot_service.PotResponse, error) {
+	if err := request.Validate(); err != nil {
+		return nil, twirp.InvalidArgumentError(err.Error(), "")
+	}
+	pot, err := models.PotByPotName(s.DB, request.PotName)
+	if err != nil {
+		return nil, twirp.NotFoundError(err.Error())
+	}
+	return &pot_service.PotResponse{
+		PotId:      pot.ID,
+		PotName:    pot.PotName,
+		MaxCoins:   pot.MaxCoins,
+		CreateTime: &timestamp.Timestamp{Seconds: pot.CreateTime.Unix(), Nanos: int32(pot.CreateTime.Nanosecond())},
+	}, nil
 }
 
 func (s *potServer) CreatePot(ctx context.Context, request *pot_service.CreatePotRequest) (*pot_service.PotResponse, error) {
@@ -90,9 +104,9 @@ func (s *potServer) CreatePot(ctx context.Context, request *pot_service.CreatePo
 		return nil, twirp.InvalidArgumentError(err.Error(), "")
 	}
 	return &pot_service.PotResponse{
-		PotId: pot.ID,
-		PotName: pot.PotName,
-		MaxCoins: pot.MaxCoins,
-		CreateTime: &timestamp.Timestamp{Seconds:pot.CreateTime.Unix(), Nanos: int32(pot.CreateTime.Nanosecond())},
+		PotId:      pot.ID,
+		PotName:    pot.PotName,
+		MaxCoins:   pot.MaxCoins,
+		CreateTime: &timestamp.Timestamp{Seconds: pot.CreateTime.Unix(), Nanos: int32(pot.CreateTime.Nanosecond())},
 	}, nil
 }

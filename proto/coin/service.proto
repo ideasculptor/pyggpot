@@ -26,6 +26,7 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
 service Coin {
     rpc AddCoins(AddCoinsRequest) returns (CoinsListResponse);
     rpc RemoveCoins(RemoveCoinsRequest) returns (CoinsListResponse);
+    rpc ListCoins(ListCoinsRequest) returns (CoinsListResponse);
 }
 
 //
@@ -50,6 +51,10 @@ message AddCoinsRequest {
 message RemoveCoinsRequest {
     int32 pot_id = 1 [(validator.field) = {int_gt: 0}]; // required
     int32 count = 2 [(validator.field) = {int_gt: 0}];
+}
+
+message ListCoinsRequest {
+    int32 pot_id = 1 [(validator.field) = {int_gt: 0}]; // required
 }
 
 //
