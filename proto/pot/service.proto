@@ -36,7 +36,7 @@ message CreatePotRequest {
     string pot_name = 1 [
         (validator.field) = {
             regex: "^[A-Za-z0-9]{2}(?:[ _-]?[A-Za-z0-9])+$"
-            human_error: "Can contain only alphanumeric characters, dot and underscore."
+            human_error: "Must begin with 2 alphanumeric characters followed by any alpha numeric chars plus space, hyphen, and underscore, and must end with an alpha-numeric character."
         }
     ]; // required
     int32 max_coins = 2 [(validator.field) = {int_gt:5}];

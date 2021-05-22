@@ -3,16 +3,19 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/aspiration-labs/pyggpot/internal/models"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/aspiration-labs/pyggpot/internal/models"
 
 	"github.com/aspiration-labs/pyggpot/internal/hooks"
-	"github.com/aspiration-labs/pyggpot/internal/providers/coin"
-	"github.com/aspiration-labs/pyggpot/internal/providers/pot"
-	"github.com/aspiration-labs/pyggpot/rpc/go/coin"
-	"github.com/aspiration-labs/pyggpot/rpc/go/pot"
+	coin_provider "github.com/aspiration-labs/pyggpot/internal/providers/coin"
+	pot_provider "github.com/aspiration-labs/pyggpot/internal/providers/pot"
+	coin_service "github.com/aspiration-labs/pyggpot/rpc/go/coin"
+	pot_service "github.com/aspiration-labs/pyggpot/rpc/go/pot"
 	_ "github.com/aspiration-labs/pyggpot/swaggerui-statik/statik"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
@@ -23,6 +26,7 @@ var flagVerbose = flag.Bool("v", false, "verbose")
 var flagDB = flag.String("url", "file:database.sqlite3?_loc=auto&_foreign_keys=1", "database url")
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 
 	flag.Parse()
 	if *flagVerbose {
